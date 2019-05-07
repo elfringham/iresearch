@@ -1041,8 +1041,22 @@ class doc_iterator : public irs::doc_iterator {
 
     seek_to_block(target);
 
-    // FIXME binary search instead of linear
-    irs::seek(*this, target);
+    if (begin_ == end_) {
+      cur_pos_ += relative_pos();
+
+      if (cur_pos_ == term_state_.docs_count) {
+        doc_.value = doc_limits::eof();
+        begin_ = end_ = docs_; // seal the iterator
+        return doc_limits::eof();
+      }
+
+      refill();
+    }
+
+    begin_ = std::lower_bound(begin_, const_cast<const doc_id_t*>(end_), target);
+    doc_freq_ = doc_freq_ + relative_pos();
+
+    next();
     return value();
   }
 
@@ -1200,7 +1214,7 @@ class doc_iterator : public irs::doc_iterator {
       : (doc_limits::min)();
 
     // decode delta encoded documents block
-    encode::delta::decode(std::begin(docs_), end_);
+    encode::delta::decode(std::begin(docs_), const_cast<doc_id_t*>(end_));
 
     begin_ = docs_;
     doc_freq_ = docs_ + postings_writer::BLOCK_SIZE;
@@ -1215,7 +1229,7 @@ class doc_iterator : public irs::doc_iterator {
   uint32_t doc_freqs_[postings_writer::BLOCK_SIZE]; // document frequencies
   uint32_t cur_pos_{};
   const doc_id_t* begin_{docs_};
-  doc_id_t* end_{docs_};
+  const doc_id_t* end_{docs_};
   uint32_t* doc_freq_{}; // pointer into docs_ to the frequency attribute value for the current doc
   uint32_t term_freq_{}; // total term frequency
   document doc_;
@@ -1904,6 +1918,36 @@ class pos_doc_iterator final: public doc_iterator {
     pos_.clear();
 
     return true;
+  }
+
+  virtual doc_id_t seek(doc_id_t target) override {
+    if (target <= doc_.value) {
+      return doc_.value;
+    }
+
+    seek_to_block(target);
+
+    if (begin_ == end_) {
+      cur_pos_ += relative_pos();
+
+      if (cur_pos_ == term_state_.docs_count) {
+        doc_.value = doc_limits::eof();
+        begin_ = end_ = docs_; // seal the iterator
+        return doc_limits::eof();
+      }
+
+      refill();
+    }
+
+    const auto* begin = std::lower_bound(begin_, end_, target);
+    auto* doc_freq = doc_freq_ + std::distance(begin_, begin);
+
+    pos_.pend_pos_ = std::accumulate(doc_freq_, doc_freq, pos_.pend_pos_);
+    begin_ = begin;
+    doc_freq_ = doc_freq;
+
+    next();
+    return value();
   }
 
  protected:
