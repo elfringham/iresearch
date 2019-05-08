@@ -1054,7 +1054,7 @@ class doc_iterator : public irs::doc_iterator {
     }
 
     begin_ = std::lower_bound(begin_, const_cast<const doc_id_t*>(end_), target);
-    doc_freq_ = doc_freq_ + relative_pos();
+    doc_freq_ = doc_freqs_ + relative_pos();
 
     next();
     return value();
