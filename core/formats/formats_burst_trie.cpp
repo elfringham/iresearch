@@ -1729,28 +1729,36 @@ void field_writer::write_segment_features(data_output& out, const flags& feature
   out.write_vlong(features.size());
   feature_map_.clear();
   feature_map_.reserve(features.size());
-  for (const attribute::type_id* feature : features) {
-    write_string(out, feature->name());
+
+  auto visitor = [&out, this](const attribute::type_id& feature) {
+    write_string(out, feature.name());
     feature_map_.emplace(feature, feature_map_.size());
-  }
+    return true;
+  };
+
+  features.visit(visitor);
 }
 
 void field_writer::write_field_features(data_output& out, const flags& features) const {
   out.write_vlong(features.size());
-  for (auto feature : features) {
-    const auto it = feature_map_.find(*feature);
+
+  auto visitor = [&out, this](const attribute::type_id& feature) {
+    const auto it = feature_map_.find(feature);
     assert(it != feature_map_.end());
 
     if (feature_map_.end() == it) {
       // should not happen in reality
       throw irs::index_error(string_utils::to_string(
         "feature '%s' is not listed in segment features",
-        feature->name().c_str()
+        feature.name().c_str()
       ));
     }
 
     out.write_vlong(it->second);
-  }
+    return true;
+  };
+
+  features.visit(visitor);
 }
 
 void field_writer::end_field(

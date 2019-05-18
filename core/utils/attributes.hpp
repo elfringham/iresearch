@@ -32,6 +32,7 @@
 #include "string.hpp"
 #include "timer_utils.hpp"
 #include "bit_utils.hpp"
+#include "bitvector.hpp"
 #include "type_id.hpp"
 #include "noncopyable.hpp"
 #include "string.hpp"
@@ -54,17 +55,23 @@ struct IRESEARCH_API attribute {
   //////////////////////////////////////////////////////////////////////////////
   class IRESEARCH_API type_id: public iresearch::type_id, util::noncopyable {
    public:
-    type_id(const string_ref& name): name_(name) {}
-    operator const type_id*() const { return this; }
     static bool exists(const string_ref& name, bool load_library = true);
+
     static const type_id* get(
       const string_ref& name,
       bool load_library = true
     ) NOEXCEPT;
-    const string_ref& name() const { return name_; }
+
+    static const attribute::type_id* get(size_t id) NOEXCEPT;
+
+    explicit type_id(const string_ref& name) NOEXCEPT;
+    operator const type_id*() const NOEXCEPT { return this; }
+    const string_ref& name() const NOEXCEPT { return name_; }
+    size_t id() const NOEXCEPT { return id_; }
 
    private:
     string_ref name_;
+    size_t id_; // runtime type unique identifier
   }; // type_id
 };
 
@@ -165,9 +172,6 @@ struct IRESEARCH_API_TEMPLATE basic_stored_attribute : stored_attribute {
 //////////////////////////////////////////////////////////////////////////////
 class IRESEARCH_API flags {
  public:  
-  // std::set<...> is 25% faster than std::unordered_set<...> as per profile_bulk_index test
-  typedef std::set<const attribute::type_id*> type_map;
-
   static const flags& empty_instance();
 
   flags();
@@ -177,9 +181,6 @@ class IRESEARCH_API flags {
   flags& operator=(std::initializer_list<const attribute::type_id*> flags);
   flags& operator=(flags&& rhs) NOEXCEPT;
   flags& operator=(const flags&) = default;
-
-  type_map::const_iterator begin() const { return map_.begin(); }
-  type_map::const_iterator end() const { return map_.end(); }
 
   template< typename T >
   flags& add() {
@@ -191,7 +192,7 @@ class IRESEARCH_API flags {
   }
 
   flags& add(const attribute::type_id& type) {
-    map_.insert(&type);
+    map_.set(type.id());
     return *this;
   }
   
@@ -205,15 +206,15 @@ class IRESEARCH_API flags {
   }
 
   flags& remove(const attribute::type_id& type) {
-    map_.erase(&type);
+    map_.unset(type.id());
     return *this;
   }
   
   bool empty() const { return map_.empty(); }
-  size_t size() const { return map_.size(); }
+  size_t size() const { return map_.count(); }
   void clear() NOEXCEPT { map_.clear(); }
-  void reserve(size_t /*capacity*/) {
-    // NOOP for std::set
+  void reserve(size_t capacity) {
+    map_.reserve(capacity);
   }
 
   template< typename T >
@@ -226,7 +227,7 @@ class IRESEARCH_API flags {
   }
 
   bool check(const attribute::type_id& type) const NOEXCEPT {
-    return map_.end() != map_.find( &type );
+    return map_.test(type.id());
   }
 
   bool operator==(const flags& rhs) const {
@@ -238,56 +239,48 @@ class IRESEARCH_API flags {
   }
 
   flags& operator|=(const flags& rhs) {
-    std::for_each(
-      rhs.map_.begin(), rhs.map_.end() ,
-      [this] ( const attribute::type_id* type ) {
-        add( *type );
-    } );
+    map_ |= rhs.map_;
     return *this;
   }
 
   flags operator&(const flags& rhs) const {
-    const type_map* lhs_map = &map_;
-    const type_map* rhs_map = &rhs.map_;
-    if (lhs_map->size() > rhs_map->size()) {
-      std::swap(lhs_map, rhs_map);
-    }
-    
-    flags out;
-    out.reserve(lhs_map->size());
-
-    for (auto lhs_it = lhs_map->begin(), lhs_end = lhs_map->end(); lhs_it != lhs_end; ++lhs_it) {
-      auto rhs_it = rhs_map->find(*lhs_it);
-      if (rhs_map->end() != rhs_it) {
-        out.add(**rhs_it);
-      }
-    }
-
-    return out;
+    flags result(*this);
+    result.map_ &= rhs.map_;
+    return result;
   }
 
   flags operator|(const flags& rhs) const {
-    flags out(*this);
-    out.reserve(rhs.size());
-    for (auto it = rhs.map_.begin(), end = rhs.map_.end(); it != end; ++it) {
-      out.add(**it);
-    }
-    return out;
+    flags result(*this);
+    result.map_ |= rhs.map_;
+    return result;
   }
 
   bool is_subset_of(const flags& rhs) const {
-    auto& rhs_map = rhs.map_;
-    for (auto entry : map_) {
-      if (rhs_map.end() == rhs_map.find(entry)) {
+    auto visitor = [&rhs](size_t i) NOEXCEPT {
+      return rhs.map_.test(i);
+    };
+
+    return map_.visit(visitor);
+  }
+
+  template<typename Visitor>
+  bool visit(Visitor visitor) const {
+    auto visit_ids = [&visitor](size_t i) NOEXCEPT {
+      auto* type = attribute::type_id::get(i);
+
+      if (!type) {
         return false;
       }
-    } 
-    return true;
-  } 
+
+      return visitor(*type);
+    };
+
+    return map_.visit(visit_ids);
+  }
 
  private:
   IRESEARCH_API_PRIVATE_VARIABLES_BEGIN
-  type_map map_;
+  bitvector map_;
   IRESEARCH_API_PRIVATE_VARIABLES_END
 };
 

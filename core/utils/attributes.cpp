@@ -24,6 +24,7 @@
 #include "shared.hpp"
 #include "utils/register.hpp"
 #include "attributes.hpp"
+#include "thread_utils.hpp"
 
 #include <cassert>
 
@@ -35,6 +36,9 @@ class attribute_register:
 
 const iresearch::attribute_store EMPTY_ATTRIBUTE_STORE(0);
 const iresearch::attribute_view  EMPTY_ATTRIBUTE_VIEW(0);
+
+std::mutex TYPE_IDS_LOCK;
+std::vector<const irs::attribute::type_id*> TYPE_IDS;
 
 NS_END
 
@@ -63,6 +67,23 @@ NS_ROOT
   }
 
   return nullptr;
+}
+
+/*static*/ const attribute::type_id* attribute::type_id::get(size_t id) NOEXCEPT {
+ // SCOPED_LOCK(TYPE_IDS_LOCK);
+  if (id >= TYPE_IDS.size()) {
+    return nullptr;
+  }
+
+  return TYPE_IDS[id];
+}
+
+attribute::type_id::type_id(const string_ref& name) NOEXCEPT
+  : name_(name) {
+//  SCOPED_LOCK(TYPE_IDS_LOCK);
+  id_ = TYPE_IDS.size();
+  TYPE_IDS.push_back(this);
+  //std::cerr << name << " " <<TYPE_IDS.size() << std::endl;
 }
 
 // -----------------------------------------------------------------------------
