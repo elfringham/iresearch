@@ -52,7 +52,7 @@ struct IRESEARCH_API type_id {
  private:
   static size_t compute_hash(const type_id* ptr) {
     return irs::hash_utils::hash(
-      irs::string_ref(reinterpret_cast<const char*>(ptr), sizeof(ptr))
+      irs::string_ref(reinterpret_cast<const char*>(ptr), sizeof(ptr)) //-V568
     );
   }
 }; // type_id

@@ -42,7 +42,7 @@ inline constexpr size_t align_up(size_t size, size_t alignment) noexcept {
   assert(math::is_power2(alignment));
   return (size + alignment - 1) & (0 - alignment);
 #else
-  return IRS_ASSERT(math::is_power2(alignment)),
+  return IRS_ASSERT(math::is_power2(alignment)), //-V521,-V685
          (size + alignment - 1) & (0 - alignment);
 #endif
 }

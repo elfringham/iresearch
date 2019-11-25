@@ -275,7 +275,7 @@ filter::prepared::ptr by_phrase::prepare(
     state.terms = std::move(phrase_terms);
     state.reader = tr;
 
-    phrase_terms.reserve(phrase_.size());
+    phrase_terms.reserve(phrase_.size()); //-V1030
   }
 
   // offset of the first term in a phrase

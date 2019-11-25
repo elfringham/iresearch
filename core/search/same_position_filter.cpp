@@ -322,7 +322,7 @@ filter::prepared::ptr by_same_position::prepare(
     auto& state = query_states.insert(segment);
     state = std::move(term_states);
 
-    term_states.reserve(terms_.size());
+    term_states.reserve(terms_.size()); //-V325
   }
 
   // finish stats

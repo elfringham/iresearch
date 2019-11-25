@@ -37,14 +37,14 @@ class range {
   constexpr range() noexcept: begin_(nullptr), end_(nullptr) {}
   constexpr range(value_type* data, size_t size) noexcept: begin_(data), end_(data + size) {}
   constexpr const value_type& operator[](size_t i) const noexcept {
-    return IRS_ASSERT(i < size()), begin_[i];
+    return IRS_ASSERT(i < size()), begin_[i]; //-V521,-V685
   }
   constexpr bool empty() const noexcept { return begin_ == end_; }
   constexpr size_t size() const noexcept { return std::distance(begin_, end_); }
 
 #if IRESEARCH_CXX > IRESEARCH_CXX_11
   constexpr value_type& operator[](size_t i) noexcept {
-    return IRS_ASSERT(i < size()), begin_[i];
+    return IRS_ASSERT(i < size()), begin_[i]; //-V521,-V685
   }
   constexpr value_type* begin() noexcept { return begin_; }
   constexpr value_type* end() noexcept { return end_; }

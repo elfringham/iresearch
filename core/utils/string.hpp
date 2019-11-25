@@ -174,7 +174,7 @@ class basic_string_ref {
   }
 
   constexpr const char_type& operator[](size_t i) const noexcept {
-    return IRS_ASSERT(i < size_), data_[i];
+    return IRS_ASSERT(i < size_), data_[i]; //-V521,-V685
   }
 
   // Returns the pointer to a C string.

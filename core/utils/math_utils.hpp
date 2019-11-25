@@ -84,7 +84,7 @@ inline size_t roundup_power2(size_t v) noexcept {
 ///        the next greater integer value
 constexpr inline uint64_t div_ceil64(uint64_t num, uint64_t den) noexcept {
   // ensure no overflow
-  return IRS_ASSERT(den != 0 && (num + den) >= num && (num + den >= den)),
+  return IRS_ASSERT(den != 0 && (num + den) >= num && (num + den >= den)), //-V521,-V685
          (num + den - 1)/den;
 }
 
@@ -92,7 +92,8 @@ constexpr inline uint64_t div_ceil64(uint64_t num, uint64_t den) noexcept {
 ///        the next greater integer value
 constexpr inline uint32_t div_ceil32(uint32_t num, uint32_t den) noexcept {
   // ensure no overflow
-  return IRS_ASSERT(den != 0 && (num + den) >= num && (num + den >= den)),
+  return IRS_ASSERT(den != 0 && (num + den) >= num && (num + den >= den)), //-V521,-V685
+
          (num + den - 1)/den;
 }
 

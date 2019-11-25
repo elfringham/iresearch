@@ -208,7 +208,7 @@ class ptr_iterator
     >::type type;
 
     reference it = dereference();
-    return dynamic_cast<typename adjust_const<type>::pointer>(&it);
+    return dynamic_cast<typename adjust_const<type>::pointer>(&it); //-V558
   }
 
  private:
