@@ -1571,23 +1571,6 @@ class doc_iterator final : public irs::doc_iterator_base {
     assert(attrs.contains<version10::term_meta>());
     term_state_ = *attrs.get<version10::term_meta>();
 
-    // init document stream
-    if (term_state_.docs_count > 1) {
-      if (!doc_in_) {
-        doc_in_ = doc_in->reopen(); // reopen thread-safe stream
-
-        if (!doc_in_) {
-          // implementation returned wrong pointer
-          IR_FRMT_ERROR("Failed to reopen document input in: %s", __FUNCTION__);
-
-          throw io_error("failed to reopen document input");
-        }
-      }
-
-      doc_in_->seek(term_state_.doc_start);
-      assert(!doc_in_->eof());
-    }
-
     estimate(term_state_.docs_count); // estimate iterator
     attrs_.emplace(scr_); // make score accessible from outside
 
@@ -1619,7 +1602,22 @@ class doc_iterator final : public irs::doc_iterator_base {
       }
     }
 
-    if (1 == term_state_.docs_count) {
+    // init document stream
+    if (term_state_.docs_count > 1) {
+      if (!doc_in_) {
+        doc_in_ = doc_in->reopen(); // reopen thread-safe stream
+
+        if (!doc_in_) {
+          // implementation returned wrong pointer
+          IR_FRMT_ERROR("Failed to reopen document input in: %s", __FUNCTION__);
+
+          throw io_error("failed to reopen document input");
+        }
+      }
+
+      doc_in_->seek(term_state_.doc_start);
+      assert(!doc_in_->eof());
+    } else if (1 == term_state_.docs_count) {
       *docs_ = (doc_limits::min)() + term_state_.e_single_doc;
       *doc_freqs_ = term_freq_;
       doc_freq_ = doc_freqs_;
