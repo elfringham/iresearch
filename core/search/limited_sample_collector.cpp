@@ -201,12 +201,7 @@ void limited_sample_collector::collect() {
     }
 
     // update min state
-    state.docs_count = *state_.docs_count;
-    state.state_offset = state_.state_id;
-    state.state = state_.state;
-    state.cookie = state_.terms->cookie();
-    state.term = state_.terms->value();
-    state.segment = state_.segment;
+    state = state_;
 
     std::push_heap(scored_states_heap_.begin(), scored_states_heap_.end(), less);
   } else {

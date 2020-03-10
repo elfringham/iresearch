@@ -54,14 +54,14 @@ NS_LOCAL
 typedef std::unordered_multimap<const irs::sub_reader*, irs::multiterm_state> granular_states_t;
 
 // return the granularity portion of the term
-irs::bytes_ref mask_granularity(const irs::bytes_ref& term, size_t prefix_size) {
+irs::bytes_ref mask_granularity(const irs::bytes_ref& term, size_t prefix_size) noexcept {
   return term.size() > prefix_size
     ? irs::bytes_ref(term.c_str(), prefix_size)
     : term;
 }
 
 // return the value portion of the term
-irs::bytes_ref mask_value(const irs::bytes_ref& term, size_t prefix_size) {
+irs::bytes_ref mask_value(const irs::bytes_ref& term, size_t prefix_size) noexcept {
   if (term.null()) {
     return term;
   }

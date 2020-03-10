@@ -143,6 +143,16 @@ class limited_sample_collector : util::noncopyable {
       assert(this->cookie);
     }
 
+    scored_term_state& operator=(const collector_state& state) {
+      docs_count = *state.docs_count;
+      state_offset = state.state_id;
+      this->state = state.state;
+      cookie = state.terms->cookie();
+      term = state.terms->value();
+      segment = state.segment;
+      return *this;
+    }
+
     seek_term_iterator::cookie_ptr cookie; // term offset cache
     limited_sample_state* state; // state containing this scored term
     const irs::sub_reader* segment; // segment reader for the current term
