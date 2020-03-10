@@ -20,7 +20,7 @@
 /// @author Andrey Abramov
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "limited_sample_scorer.hpp"
+#include "limited_sample_collector.hpp"
 
 #include "analysis/token_attributes.hpp"
 #include "index/index_reader.hpp"
@@ -70,25 +70,42 @@ void set_doc_ids(irs::bitset& buf, const irs::term_iterator& term, size_t docs_c
   }
 };
 
-bool less(size_t lhs_priority, size_t rhs_priority,
+bool less(uint32_t lhs_priority, uint32_t rhs_priority,
           size_t lhs_state_offset, size_t rhs_state_offset) noexcept {
   return rhs_priority < lhs_priority
       || (rhs_priority == lhs_priority && lhs_state_offset < rhs_state_offset);
 }
 
+const decltype(irs::term_meta::docs_count) NO_DOCS = 0;
+
 NS_END
 
 NS_ROOT
 
-limited_sample_scorer::limited_sample_scorer(size_t scored_terms_limit)
+limited_sample_collector::limited_sample_collector(size_t scored_terms_limit)
   : scored_terms_limit_(scored_terms_limit) {
-  scored_states_.reserve(scored_terms_limit);
-  scored_states_heap_.reserve(scored_terms_limit);
+    scored_states_.reserve(scored_terms_limit);
+    scored_states_heap_.reserve(scored_terms_limit);
 }
 
-void limited_sample_scorer::score(const index_reader& index,
+void limited_sample_collector::prepare(const sub_reader& segment,
+                                       const seek_term_iterator& terms,
+                                       limited_sample_state& scored_state) noexcept {
+  state_.state = &scored_state;
+  state_.segment = &segment;
+  state_.terms = &terms;
+
+  // get term metadata
+  auto& meta = terms.attributes().get<term_meta>();
+  state_.docs_count = meta ? &meta->docs_count : &NO_DOCS;
+  state_.state_id = 0;
+}
+
+void limited_sample_collector::score(const index_reader& index,
                                   const order::prepared& order,
                                   std::vector<bstring>& stats) {
+  assert(state_.segment && state_.terms && state_.state);
+
   if (!scored_terms_limit_) {
     return; // nothing to score (optimization)
   }
@@ -123,6 +140,9 @@ void limited_sample_scorer::score(const index_reader& index,
     scored_state.state->scored_states.emplace_back(
       std::move(scored_state.cookie),
       stats_entry.stats_offset);
+
+    // update estimation for scored state
+    scored_state.state->scored_states_estimation += scored_state.docs_count;
   }
 
   // iterate over all stats and apply/store order stats
@@ -137,16 +157,13 @@ void limited_sample_scorer::score(const index_reader& index,
   }
 }
 
-void limited_sample_scorer::collect(
-    size_t priority,
-    size_t scored_state_id,
-    limited_sample_state& scored_state,
-    const sub_reader& segment,
-    const seek_term_iterator& term_itr) {
+void limited_sample_collector::collect() {
+  ++state_.state_id;
+
   if (!scored_terms_limit_) {
     // state will not be scored
     // add all doc_ids from the doc_iterator to the unscored_docs
-    set_doc_ids(scored_state.unscored_docs, term_itr, segment.docs_count());
+    set_doc_ids(state_.state->unscored_docs, *state_.terms, state_.segment->docs_count());
 
     return; // nothing to collect (optimization)
   }
@@ -155,15 +172,14 @@ void limited_sample_scorer::collect(
     const auto& lhs_state = scored_states_[lhs];
     const auto& rhs_state = scored_states_[rhs];
 
-    return ::less(lhs_state.priority, rhs_state.priority,
+    return ::less(lhs_state.docs_count, rhs_state.docs_count,
                   lhs_state.state_offset, rhs_state.state_offset);
   };
 
   if (scored_states_.size() < scored_terms_limit_) {
     // have not reached the scored state limit yet
     scored_states_heap_.push_back(scored_states_.size());
-    scored_states_.emplace_back(priority, segment, scored_state,
-                                scored_state_id, term_itr.value(), term_itr.cookie());
+    scored_states_.emplace_back(state_);
 
     std::push_heap(scored_states_heap_.begin(), scored_states_heap_.end(), less);
     return;
@@ -171,7 +187,7 @@ void limited_sample_scorer::collect(
 
   auto& min_state = scored_states_[scored_states_heap_.front()];
 
-  if (::less(priority, min_state.priority, min_state.state_offset, scored_state_id)) { // FIXME
+  if (::less(*state_.docs_count, min_state.docs_count, min_state.state_offset, state_.state_id)) { // FIXME
     std::pop_heap(scored_states_heap_.begin(), scored_states_heap_.end(), less);
 
     auto& state = scored_states_[scored_states_heap_.back()];
@@ -185,18 +201,18 @@ void limited_sample_scorer::collect(
     }
 
     // update min state
-    state.priority = priority;
-    state.state = &scored_state;
-    state.cookie = term_itr.cookie();
-    state.term = term_itr.value();
-    state.segment = &segment;
-    state.state_offset = scored_state_id;
+    state.docs_count = *state_.docs_count;
+    state.state_offset = state_.state_id;
+    state.state = state_.state;
+    state.cookie = state_.terms->cookie();
+    state.term = state_.terms->value();
+    state.segment = state_.segment;
 
     std::push_heap(scored_states_heap_.begin(), scored_states_heap_.end(), less);
   } else {
     // state will not be scored
     // add all doc_ids from the doc_iterator to the unscored_docs
-    set_doc_ids(scored_state.unscored_docs, term_itr, segment.docs_count());
+    set_doc_ids(state_.state->unscored_docs, *state_.terms, state_.segment->docs_count());
   }
 }
 

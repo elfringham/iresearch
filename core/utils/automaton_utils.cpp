@@ -23,7 +23,7 @@
 #include "automaton_utils.hpp"
 
 #include "index/index_reader.hpp"
-#include "search/limited_sample_scorer.hpp"
+#include "search/limited_sample_collector.hpp"
 #include "search/multiterm_query.hpp"
 #include "utils/fst_table_matcher.hpp"
 
@@ -306,7 +306,7 @@ filter::prepared::ptr prepare_automaton_filter(const string_ref& field,
     return filter::prepared::empty();
   }
 
-  limited_sample_scorer scorer(order.empty() ? 0 : scored_terms_limit); // object for collecting order stats
+  limited_sample_collector collector(order.empty() ? 0 : scored_terms_limit); // object for collecting order stats
   multiterm_query::states_t states(index.size());
 
   for (const auto& segment : index) {
@@ -319,30 +319,22 @@ filter::prepared::ptr prepare_automaton_filter(const string_ref& field,
 
     auto it = reader->iterator(matcher);
 
-    auto& meta = it->attributes().get<term_meta>(); // get term metadata
-    const decltype(irs::term_meta::docs_count) NO_DOCS = 0;
-
-    // NOTE: we can't use reference to 'docs_count' here, like
-    // 'const auto& docs_count = meta ? meta->docs_count : NO_DOCS;'
-    // since not gcc4.9 nor msvc2015-2019 can handle this correctly
-    // probably due to broken optimization
-    const auto* docs_count = meta ? &meta->docs_count : &NO_DOCS;
-
     if (it->next()) {
       auto& state = states.insert(segment);
       state.reader = reader;
 
+      collector.prepare(segment, *it, state);
+
       do {
         it->read(); // read term attributes
 
-        state.estimation += *docs_count;
-        scorer.collect(*docs_count, state.count++, state, segment, *it);
+        collector.collect();
       } while (it->next());
     }
   }
 
   std::vector<bstring> stats;
-  scorer.score(index, order, stats);
+  collector.score(index, order, stats);
 
   return memory::make_shared<multiterm_query>(std::move(states), std::move(stats), boost);
 }

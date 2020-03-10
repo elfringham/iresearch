@@ -23,7 +23,6 @@
 #include "wildcard_filter.hpp"
 
 #include "shared.hpp"
-#include "limited_sample_scorer.hpp"
 #include "multiterm_query.hpp"
 #include "term_query.hpp"
 #include "index/index_reader.hpp"

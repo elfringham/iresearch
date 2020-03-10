@@ -42,7 +42,7 @@ DEFINE_FACTORY_DEFAULT(by_prefix)
     const string_ref& field,
     const bytes_ref& prefix,
     size_t scored_terms_limit) {
-  limited_sample_scorer scorer(ord.empty() ? 0 : scored_terms_limit); // object for collecting order stats
+  limited_sample_collector collector(ord.empty() ? 0 : scored_terms_limit); // object for collecting order stats
   multiterm_query::states_t states(index.size());
 
   // iterate over the segments
@@ -63,16 +63,6 @@ DEFINE_FACTORY_DEFAULT(by_prefix)
 
     auto& value = terms->value();
 
-    // get term metadata
-    auto& meta = terms->attributes().get<term_meta>();
-    const decltype(irs::term_meta::docs_count) NO_DOCS = 0;
-
-    // NOTE: we can't use reference to 'docs_count' here, like
-    // 'const auto& docs_count = meta ? meta->docs_count : NO_DOCS;'
-    // since not gcc4.9 nor msvc2015-2019 can handle this correctly
-    // probably due to broken optimization
-    const auto* docs_count = meta ? &meta->docs_count : &NO_DOCS;
-
     if (starts_with(value, prefix)) {
       terms->read();
 
@@ -80,10 +70,11 @@ DEFINE_FACTORY_DEFAULT(by_prefix)
       auto& state = states.insert(segment);
       state.reader = reader;
 
+      collector.prepare(segment, *terms, state);
+
       do {
         // fill scoring candidates
-        scorer.collect(*docs_count, state.count++, state, segment, *terms);
-        state.estimation += *docs_count; // collect cost
+        collector.collect();
 
         if (!terms->next()) {
           break;
@@ -95,7 +86,7 @@ DEFINE_FACTORY_DEFAULT(by_prefix)
   }
 
   std::vector<bstring> stats;
-  scorer.score(index, ord, stats);
+  collector.score(index, ord, stats);
 
   return memory::make_shared<multiterm_query>(std::move(states), std::move(stats), boost);
 }

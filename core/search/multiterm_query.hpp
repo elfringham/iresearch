@@ -24,8 +24,7 @@
 #define IRESEARCH_MULTITERM_QUERY_H
 
 #include "filter.hpp"
-#include "cost.hpp"
-#include "limited_sample_scorer.hpp"
+#include "limited_sample_collector.hpp"
 
 NS_ROOT
 
@@ -34,8 +33,7 @@ NS_ROOT
 /// @brief cached per reader range state
 //////////////////////////////////////////////////////////////////////////////
 struct multiterm_state : limited_sample_state {
-  size_t count{}; // number of matched terms in a state
-  cost::cost_t estimation{}; // estimated cost
+  boost_t boost{no_boost()}; // state boost
 };
 
 //////////////////////////////////////////////////////////////////////////////

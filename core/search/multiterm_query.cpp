@@ -24,6 +24,7 @@
 
 #include "shared.hpp"
 #include "bitset_doc_iterator.hpp"
+#include "cost.hpp"
 #include "disjunction.hpp"
 
 NS_ROOT
@@ -93,7 +94,7 @@ doc_iterator::ptr multiterm_query::execute(
     }
   }
 
-  return make_disjunction<disjunction_t>(std::move(itrs), ord, state->estimation);
+  return make_disjunction<disjunction_t>(std::move(itrs), ord, state->estimation());
 }
 
 NS_END // ROOT
