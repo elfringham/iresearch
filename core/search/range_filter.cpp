@@ -38,9 +38,17 @@ void collect_terms(
     const irs::term_reader& field,
     irs::seek_term_iterator& terms,
     irs::multiterm_query::states_t& states,
-    irs::limited_sample_collector& scorer,
+    irs::limited_sample_collector<irs::term_frequency>& scorer,
     Comparer cmp) {
   auto& value = terms.value();
+  auto& meta = terms.attributes().get<irs::term_meta>();
+  const decltype(irs::term_meta::docs_count) NO_DOCS = 0;
+
+  // NOTE: we can't use reference to 'docs_count' here, like
+  // 'const auto& docs_count = meta ? meta->docs_count : NO_DOCS;'
+  // since not gcc4.9 nor msvc2015-2019 can handle this correctly
+  // probably due to broken optimization
+  const auto* docs_count = meta ? &meta->docs_count : &NO_DOCS;
 
   if (cmp(value)) {
     // read attributes
@@ -52,9 +60,11 @@ void collect_terms(
 
     scorer.prepare(segment, terms, state);
 
+    irs::term_frequency key{*docs_count, 0};
+
     do {
       // fill scoring candidates
-      scorer.collect();
+      scorer.collect(key);
 
       if (!terms.next()) {
         break;
@@ -62,6 +72,9 @@ void collect_terms(
 
       // read attributes
       terms.read();
+
+      ++key.offset;
+      key.frequency = *docs_count;
     } while (cmp(value));
   }
 }
@@ -118,7 +131,7 @@ filter::prepared::ptr by_range::prepare(
     return prepared::empty();
   }
 
-  limited_sample_collector scorer(ord.empty() ? 0 : scored_terms_limit()); // object for collecting order stats
+  limited_sample_collector<irs::term_frequency> scorer(ord.empty() ? 0 : scored_terms_limit()); // object for collecting order stats
   multiterm_query::states_t states(index.size());
 
   const string_ref field = this->field();

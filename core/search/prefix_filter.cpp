@@ -42,7 +42,7 @@ DEFINE_FACTORY_DEFAULT(by_prefix)
     const string_ref& field,
     const bytes_ref& prefix,
     size_t scored_terms_limit) {
-  limited_sample_collector collector(ord.empty() ? 0 : scored_terms_limit); // object for collecting order stats
+  limited_sample_collector<term_frequency> collector(ord.empty() ? 0 : scored_terms_limit); // object for collecting order stats
   multiterm_query::states_t states(index.size());
 
   // iterate over the segments
@@ -61,6 +61,15 @@ DEFINE_FACTORY_DEFAULT(by_prefix)
       continue;
     }
 
+    auto& meta = terms->attributes().get<irs::term_meta>();
+    const decltype(irs::term_meta::docs_count) NO_DOCS = 0;
+
+    // NOTE: we can't use reference to 'docs_count' here, like
+    // 'const auto& docs_count = meta ? meta->docs_count : NO_DOCS;'
+    // since not gcc4.9 nor msvc2015-2019 can handle this correctly
+    // probably due to broken optimization
+    const auto* docs_count = meta ? &meta->docs_count : &NO_DOCS;
+
     auto& value = terms->value();
 
     if (starts_with(value, prefix)) {
@@ -72,15 +81,20 @@ DEFINE_FACTORY_DEFAULT(by_prefix)
 
       collector.prepare(segment, *terms, state);
 
+      term_frequency key{*docs_count, 0};
+
       do {
         // fill scoring candidates
-        collector.collect();
+        collector.collect(key);
 
         if (!terms->next()) {
           break;
         }
 
         terms->read();
+
+        ++key.offset;
+        key.frequency = *docs_count;
       } while (starts_with(value, prefix));
     }
   }

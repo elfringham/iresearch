@@ -306,7 +306,7 @@ filter::prepared::ptr prepare_automaton_filter(const string_ref& field,
     return filter::prepared::empty();
   }
 
-  limited_sample_collector collector(order.empty() ? 0 : scored_terms_limit); // object for collecting order stats
+  limited_sample_collector<term_frequency> collector(order.empty() ? 0 : scored_terms_limit); // object for collecting order stats
   multiterm_query::states_t states(index.size());
 
   for (const auto& segment : index) {
@@ -319,16 +319,29 @@ filter::prepared::ptr prepare_automaton_filter(const string_ref& field,
 
     auto it = reader->iterator(matcher);
 
+    auto& meta = it->attributes().get<irs::term_meta>();
+    const decltype(irs::term_meta::docs_count) NO_DOCS = 0;
+
+    // NOTE: we can't use reference to 'docs_count' here, like
+    // 'const auto& docs_count = meta ? meta->docs_count : NO_DOCS;'
+    // since not gcc4.9 nor msvc2015-2019 can handle this correctly
+    // probably due to broken optimization
+    const auto* docs_count = meta ? &meta->docs_count : &NO_DOCS;
+
     if (it->next()) {
       auto& state = states.insert(segment);
       state.reader = reader;
 
       collector.prepare(segment, *it, state);
 
+      term_frequency key{0, 0};
+
       do {
         it->read(); // read term attributes
 
-        collector.collect();
+        key.frequency = *docs_count;
+        collector.collect(key);
+        ++key.offset;
       } while (it->next());
     }
   }

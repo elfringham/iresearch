@@ -567,7 +567,8 @@ parametric_description read(data_input& in) {
 
 automaton make_levenshtein_automaton(
     const parametric_description& description,
-    const bytes_ref& target) {
+    const bytes_ref& target,
+    size_t* utf8_length /*= nullptr*/) {
   assert(description);
 
   struct state {
@@ -680,6 +681,10 @@ automaton make_levenshtein_automaton(
   // ensure invalid state has no outbound transitions
   assert(0 == a.NumArcs(INVALID_STATE));
 #endif
+
+  if (utf8_length) {
+    *utf8_length = utf8_size;
+  }
 
   return a;
 }

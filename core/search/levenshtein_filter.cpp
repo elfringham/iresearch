@@ -24,12 +24,28 @@
 
 #include "shared.hpp"
 #include "index/index_reader.hpp"
+#include "analysis/token_attributes.hpp"
+#include "search/limited_sample_collector.hpp"
+#include "search/multiterm_query.hpp"
 #include "utils/automaton_utils.hpp"
+#include "utils/fst_table_matcher.hpp"
 #include "utils/levenshtein_utils.hpp"
 #include "utils/levenshtein_default_pdp.hpp"
 #include "utils/hash_utils.hpp"
 #include "utils/noncopyable.hpp"
 #include "utils/std.hpp"
+
+NS_LOCAL
+
+////////////////////////////////////////////////////////////////////////////////
+/// @returns levenshtein similarity
+////////////////////////////////////////////////////////////////////////////////
+FORCE_INLINE float_t similarity(uint32_t distance, uint32_t size) noexcept {
+  assert(size);
+  return 1.f - float_t(distance) / size;
+}
+
+NS_END
 
 NS_ROOT
 
@@ -55,8 +71,62 @@ filter::prepared::ptr by_edit_distance::prepare(
   boost *= this->boost();
   const string_ref field = this->field();
 
-  return prepare_automaton_filter(field, make_levenshtein_automaton(d, term()),
-                                  scored_terms_limit(), index, order, boost);
+  const auto acceptor = make_levenshtein_automaton(d, term());
+  automaton_table_matcher matcher(acceptor, fst::fsa::kRho);
+
+  if (fst::kError == matcher.Properties(0)) {
+    IR_FRMT_ERROR("Expected deterministic, epsilon-free acceptor, "
+                  "got the following properties " IR_UINT64_T_SPECIFIER "",
+                  acceptor.Properties(automaton_table_matcher::FST_PROPERTIES, false));
+
+    return filter::prepared::empty();
+  }
+
+  const uint32_t utf8_term_size = static_cast<uint32_t>(utf8_utils::utf8_length(term()));
+  limited_sample_collector<boost_t> collector(order.empty() ? 0 : scored_terms_limit()); // object for collecting order stats
+  multiterm_query::states_t states(index.size());
+
+  const byte_type NO_DISTANCE = 0;
+
+  for (const auto& segment : index) {
+    // get term dictionary for field
+    const term_reader* reader = segment.field(field);
+
+    if (!reader) {
+      continue;
+    }
+
+    const byte_type* distance = &NO_DISTANCE;
+
+    auto& payload = reader->attributes().get<irs::payload>();
+
+    if (payload && !payload->value.empty()) {
+      distance = &payload->value.front();
+    }
+
+    auto it = reader->iterator(matcher);
+
+    if (it->next()) {
+      auto& state = states.insert(segment);
+      state.reader = reader;
+
+      collector.prepare(segment, *it, state);
+
+      do {
+        it->read(); // read term attributes
+
+        const auto utf8_value_size = static_cast<uint32_t>(utf8_utils::utf8_length(it->value()));
+        const auto key = ::similarity(*distance, std::min(utf8_value_size, utf8_term_size));
+
+        collector.collect(key);
+      } while (it->next());
+    }
+  }
+
+  std::vector<bstring> stats;
+  collector.score(index, order, stats);
+
+  return memory::make_shared<multiterm_query>(std::move(states), std::move(stats), boost);
 }
 
 by_edit_distance::by_edit_distance() noexcept
