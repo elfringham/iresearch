@@ -96,15 +96,13 @@ filter::prepared::ptr by_edit_distance::prepare(
       continue;
     }
 
+    auto it = reader->iterator(matcher);
+    auto& payload = it->attributes().get<irs::payload>();
+
     const byte_type* distance = &NO_DISTANCE;
-
-    auto& payload = reader->attributes().get<irs::payload>();
-
     if (payload && !payload->value.empty()) {
       distance = &payload->value.front();
     }
-
-    auto it = reader->iterator(matcher);
 
     if (it->next()) {
       auto& state = states.insert(segment);

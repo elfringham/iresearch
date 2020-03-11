@@ -209,7 +209,7 @@ FORCE_INLINE bool utf8_to_utf32(const bytes_ref& in, OutputIterator out) {
 inline size_t utf8_length(const byte_type* begin, size_t size) noexcept {
   size_t length = 0;
 
-  for (auto end = begin + size; begin < end; next(begin, end)) {
+  for (auto end = begin + size; begin < end; begin = next(begin, end)) {
     ++length;
   }
 

@@ -340,9 +340,7 @@ class limited_sample_collector : util::noncopyable {
       scored_states_heap_.begin(),
       scored_states_heap_.end(),
       [this](const size_t lhs, const size_t rhs) noexcept {
-        const auto& lhs_state = scored_states_[lhs];
-        const auto& rhs_state = scored_states_[rhs];
-        return lhs_state.key < rhs_state.key;
+        return scored_states_[rhs].key < scored_states_[lhs].key;
     });
   }
 
@@ -351,9 +349,7 @@ class limited_sample_collector : util::noncopyable {
       scored_states_heap_.begin(),
       scored_states_heap_.end(),
       [this](const size_t lhs, const size_t rhs) noexcept {
-        const auto& lhs_state = scored_states_[lhs];
-        const auto& rhs_state = scored_states_[rhs];
-        return lhs_state.key < rhs_state.key;
+        return scored_states_[rhs].key < scored_states_[lhs].key;
     });
   }
 
@@ -368,8 +364,8 @@ struct term_frequency {
   uint32_t frequency;
 
   bool operator<(const term_frequency& rhs) const noexcept {
-    return rhs.frequency < frequency
-        || (frequency == rhs.frequency && offset < rhs.offset);
+    return frequency < rhs.frequency
+        || (frequency == rhs.frequency && rhs.offset < offset);
   }
 };
 
