@@ -195,7 +195,9 @@ filter::prepared::ptr by_range::prepare(
   std::vector<bstring> stats;
   scorer.score(index, ord, stats);
 
-  return memory::make_shared<multiterm_query>(std::move(states), std::move(stats), boost);
+  return memory::make_shared<multiterm_query>(
+    std::move(states), std::move(stats),
+    boost, sort::MergeType::AGGREGATE);
 }
 
 NS_END // ROOT

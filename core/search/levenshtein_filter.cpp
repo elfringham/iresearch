@@ -124,7 +124,9 @@ filter::prepared::ptr by_edit_distance::prepare(
   std::vector<bstring> stats;
   collector.score(index, order, stats);
 
-  return memory::make_shared<multiterm_query>(std::move(states), std::move(stats), boost);
+  return memory::make_shared<multiterm_query>(
+    std::move(states), std::move(stats),
+    boost, sort::MergeType::MAX);
 }
 
 by_edit_distance::by_edit_distance() noexcept

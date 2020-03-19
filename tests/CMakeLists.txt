@@ -122,6 +122,7 @@ set(IReSearch_tests_sources
   ./utils/fst_builder_test.cpp
   ./utils/fst_utils_test.cpp
   ./utils/fst_string_weight_test.cpp
+  ./utils/ngram_match_utils_tests.cpp
   ./tests_param.cpp
   ./tests_main.cpp
 )
@@ -217,7 +218,7 @@ endif()
 set_target_properties(${IResearchTests_TARGET_NAME}-shared
   PROPERTIES
   OUTPUT_NAME iresearch-tests
-  COMPILE_DEFINITIONS "$<$<CONFIG:Debug>:IRESEARCH_DEBUG>;FST_NO_DYNAMIC_LINKING;IRESEARCH_DLL;BOOST_ALL_DYN_LINK"
+  COMPILE_DEFINITIONS "$<$<CONFIG:Coverage>:IRESEARCH_DEBUG>;$<$<CONFIG:Debug>:IRESEARCH_DEBUG>;FST_NO_DYNAMIC_LINKING;IRESEARCH_DLL;BOOST_ALL_DYN_LINK"
 )
 
 set_target_properties(${IResearchTests_TARGET_NAME}-static

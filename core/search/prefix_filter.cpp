@@ -102,7 +102,9 @@ DEFINE_FACTORY_DEFAULT(by_prefix)
   std::vector<bstring> stats;
   collector.score(index, ord, stats);
 
-  return memory::make_shared<multiterm_query>(std::move(states), std::move(stats), boost);
+  return memory::make_shared<multiterm_query>(
+    std::move(states), std::move(stats),
+    boost, sort::MergeType::AGGREGATE);
 }
 
 by_prefix::by_prefix() noexcept : by_prefix(by_prefix::type()) { }

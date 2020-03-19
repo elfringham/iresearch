@@ -646,7 +646,8 @@ filter::prepared::ptr by_granular_range::prepare(
 
   for (auto& range_state: range_states) {
     multirange_filter.add<multiterm_filter_proxy>().query_
-        = memory::make_shared<multiterm_query>(std::move(range_state), shared_stats, irs::no_boost());
+        = memory::make_shared<multiterm_query>(std::move(range_state), shared_stats,
+                                               irs::no_boost(), sort::MergeType::AGGREGATE);
   }
 
   return multirange_filter.boost(this->boost()).prepare(rdr, ord, boost);

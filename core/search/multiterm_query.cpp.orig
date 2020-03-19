@@ -94,9 +94,16 @@ doc_iterator::ptr multiterm_query::execute(
     }
   }
 
+<<<<<<< HEAD
+  return make_disjunction<disjunction_t>(std::move(itrs), ord, state->estimation());
+||||||| merged common ancestors
+  return make_disjunction<disjunction_t>(std::move(itrs), ord, state->estimation);
+=======
   return make_disjunction<disjunction_t>(
       std::move(itrs), ord,
-      merge_type_, state->estimation());
+      sort::MergeType::AGGREGATE,
+      state->estimation);
+>>>>>>> 15898944c8e73dfd71f1b12f35819eb267342c72
 }
 
 NS_END // ROOT

@@ -48,19 +48,23 @@ class multiterm_query : public filter::prepared {
 
   explicit multiterm_query(states_t&& states,
                            std::shared_ptr<stats_t> const& stats,
-                           boost_t boost)
+                           boost_t boost,
+                           sort::MergeType merge_type)
     : prepared(boost),
       states_(std::move(states)),
-      stats_ptr_(stats) {
+      stats_ptr_(stats),
+      merge_type_(merge_type) {
     assert(stats_ptr_);
   }
 
   // multiterm_query will own stats
-  explicit multiterm_query(states_t&& states, stats_t&& stats, boost_t boost)
+  explicit multiterm_query(states_t&& states, stats_t&& stats,
+                           boost_t boost, sort::MergeType merge_type)
     : prepared(boost),
       states_(std::move(states)),
       stats_(std::move(stats)),
-      stats_ptr_(std::shared_ptr<stats_t>(), &stats_) {
+      stats_ptr_(std::shared_ptr<stats_t>(), &stats_),
+      merge_type_(merge_type) {
     assert(stats_ptr_);
   }
 
@@ -78,6 +82,7 @@ class multiterm_query : public filter::prepared {
   states_t states_;
   stats_t stats_;
   std::shared_ptr<stats_t> stats_ptr_;
+  sort::MergeType merge_type_;
 }; // multiterm_query
 
 NS_END // ROOT
