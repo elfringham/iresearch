@@ -67,6 +67,8 @@ inline void fill(bitset& bs, const term_iterator& term, size_t docs_count) {
   fill(bs, *it);
 }
 
+
+
 //////////////////////////////////////////////////////////////////////////////
 /// @struct limited_sample_state
 //////////////////////////////////////////////////////////////////////////////
@@ -134,16 +136,28 @@ struct limited_sample_state {
   cost::cost_t scored_states_estimation{};
 }; // limited_sample_state
 
+template<typename Key>
+struct no_boost_converter {
+  boost_t operator()(const Key&) const noexcept {
+    return no_boost();
+  }
+}; // no_boost_converter
+
 //////////////////////////////////////////////////////////////////////////////
 /// @class limited_sample_collector
 /// @brief object to collect and track a limited number of scorers,
 ///        terms with longer postings are treated as more important
 //////////////////////////////////////////////////////////////////////////////
-template<typename Key>
-class limited_sample_collector : util::noncopyable {
+template<typename Key, typename KeyToBoost = no_boost_converter<Key>>
+class limited_sample_collector : private compact<0, KeyToBoost>,
+                                 private util::noncopyable {
  public:
-  explicit limited_sample_collector(size_t scored_terms_limit)
-    : scored_terms_limit_(scored_terms_limit) {
+  typedef KeyToBoost key2boost_type;
+
+  explicit limited_sample_collector(size_t scored_terms_limit,
+                                    const key2boost_type& key2boost = {})
+    : key2boost_rep(key2boost),
+      scored_terms_limit_(scored_terms_limit) {
       scored_states_.reserve(scored_terms_limit);
       scored_states_heap_.reserve(scored_terms_limit);
   }
@@ -234,6 +248,8 @@ class limited_sample_collector : util::noncopyable {
     // stats for a specific term
     std::unordered_map<hashed_bytes_ref, stats_state> term_stats;
 
+    auto& key2boost = this->key2boost();
+
     // iterate over all the states from which statistcis should be collected
     size_t stats_offset = 0;
     for (auto& scored_state : scored_states_) {
@@ -261,7 +277,7 @@ class limited_sample_collector : util::noncopyable {
       scored_state.state->scored_states.emplace_back(
         std::move(scored_state.cookie),
         stats_entry.stats_offset,
-        no_boost());
+        key2boost(scored_state.key));
 
       // update estimation for scored state
       scored_state.state->scored_states_estimation += scored_state.docs_count;
@@ -280,6 +296,8 @@ class limited_sample_collector : util::noncopyable {
   }
 
  private:
+  typedef compact<0, KeyToBoost> key2boost_rep;
+
   struct stats_state {
     explicit stats_state(
         const irs::index_reader& index,
@@ -351,6 +369,10 @@ class limited_sample_collector : util::noncopyable {
       [this](const size_t lhs, const size_t rhs) noexcept {
         return scored_states_[rhs].key < scored_states_[lhs].key;
     });
+  }
+
+  const key2boost_type& key2boost() const noexcept {
+    return key2boost_rep::get();
   }
 
   collector_state state_;

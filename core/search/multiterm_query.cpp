@@ -83,7 +83,7 @@ doc_iterator::ptr multiterm_query::execute(
       assert(entry.stat_offset < stats.size());
       auto* stat = stats[entry.stat_offset].c_str();
 
-      score->prepare(ord, ord.prepare_scorers(segment, *state->reader, stat, attrs, boost()));
+      score->prepare(ord, ord.prepare_scorers(segment, *state->reader, stat, attrs, entry.boost*boost()));
     }
 
     itrs.emplace_back(std::move(docs));
