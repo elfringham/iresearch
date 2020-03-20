@@ -67,12 +67,11 @@ inline void fill(bitset& bs, const term_iterator& term, size_t docs_count) {
   fill(bs, *it);
 }
 
-
-
 //////////////////////////////////////////////////////////////////////////////
-/// @struct limited_sample_state
+/// @struct multiterm_state
+/// @brief cached per reader state
 //////////////////////////////////////////////////////////////////////////////
-struct limited_sample_state {
+struct multiterm_state {
   struct term_state {
     term_state(seek_term_iterator::seek_cookie::ptr&& cookie,
                size_t stat_offset,
@@ -89,14 +88,14 @@ struct limited_sample_state {
     float_t boost{ no_boost() };
   };
 
-  limited_sample_state() = default;
-  limited_sample_state(limited_sample_state&& rhs) noexcept
+  multiterm_state() = default;
+  multiterm_state(multiterm_state&& rhs) noexcept
     : reader(rhs.reader),
       scored_states(std::move(rhs.scored_states)),
       unscored_docs(std::move(rhs.unscored_docs)) {
     rhs.reader = nullptr;
   }
-  limited_sample_state& operator=(limited_sample_state&& rhs) noexcept {
+  multiterm_state& operator=(multiterm_state&& rhs) noexcept {
     if (this != &rhs) {
       scored_states = std::move(rhs.scored_states);
       unscored_docs = std::move(rhs.unscored_docs);
@@ -134,7 +133,7 @@ struct limited_sample_state {
   /// @brief estimated cost of scored states
   //////////////////////////////////////////////////////////////////////////////
   cost::cost_t scored_states_estimation{};
-}; // limited_sample_state
+}; // multiterm_state
 
 template<typename Key>
 struct no_boost_converter {
@@ -170,7 +169,7 @@ class limited_sample_collector : private compact<0, KeyToBoost>,
   //////////////////////////////////////////////////////////////////////////////
   void prepare(const sub_reader& segment,
                const seek_term_iterator& terms,
-               limited_sample_state& scored_state) noexcept {
+               multiterm_state& scored_state) noexcept {
     state_.state = &scored_state;
     state_.segment = &segment;
     state_.terms = &terms;
@@ -324,7 +323,7 @@ class limited_sample_collector : private compact<0, KeyToBoost>,
   struct collector_state {
     const sub_reader* segment{};
     const seek_term_iterator* terms{};
-    limited_sample_state* state{};
+    multiterm_state* state{};
     const uint32_t* docs_count{};
   };
 
@@ -347,7 +346,7 @@ class limited_sample_collector : private compact<0, KeyToBoost>,
 
     Key key;
     seek_term_iterator::cookie_ptr cookie; // term offset cache
-    limited_sample_state* state; // state containing this scored term
+    multiterm_state* state; // state containing this scored term
     const irs::sub_reader* segment; // segment reader for the current term
     bstring term; // actual term value this state is for
     uint32_t docs_count;
