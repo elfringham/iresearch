@@ -190,6 +190,7 @@ add_dependencies(${IResearchTests_TARGET_NAME}-static
   ${IResearch_TARGET_NAME}-format-1_0-static
   ${IResearch_TARGET_NAME}-scorer-tfidf-static
   ${IResearch_TARGET_NAME}-scorer-bm25-static
+  ${IResearch_TARGET_NAME}-static-allinone
 )
 
 target_include_directories(${IResearchTests_TARGET_NAME}-shared
