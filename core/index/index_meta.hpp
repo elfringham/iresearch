@@ -105,10 +105,11 @@ class IRESEARCH_API index_meta {
     index_segment_t(const index_segment_t& other) = default;
     index_segment_t& operator=(const index_segment_t& other) = default;
     index_segment_t(index_segment_t&&) = default;
-    index_segment_t& operator=(index_segment_t&&) = default;
+    //index_segment_t& operator=(index_segment_t&&) = default;
 
     bool operator==(const index_segment_t& other) const noexcept;
     bool operator!=(const index_segment_t& other) const noexcept;
+    index_segment_t& operator=(index_segment_t&& other) noexcept;
 
     std::string filename;
     segment_meta meta;
