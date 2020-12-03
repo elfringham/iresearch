@@ -43,7 +43,6 @@ matrix:
         - travis_retry sudo apt-get install cmake cmake-data g++-7 valgrind
       env:
         - SET_ENV="CC=gcc-7 && CXX=g++-7"
-        - CXX_STANDARD=17
         - CMAKE_VERSION=3.8.2 # supports c++17
         - BUILD_TYPE="Debug" STATIC_LIB="true" TEST_PARAMS="--gtest_filter=*:-:*"
 
@@ -58,7 +57,6 @@ matrix:
         - travis_retry sudo apt-get install cmake cmake-data g++-7 valgrind
       env:
         - SET_ENV="CC=gcc-7 && CXX=g++-7"
-        - CXX_STANDARD=17
         - CMAKE_VERSION=3.8.2 # supports c++17
         - BUILD_TYPE="Release" STATIC_LIB="true"
 
@@ -73,7 +71,6 @@ matrix:
         - travis_retry sudo apt-get install cmake cmake-data g++-7 valgrind
       env:
         - SET_ENV="CC=gcc-7 && CXX=g++-7"
-        - CXX_STANDARD=17
         - CMAKE_VERSION=3.8.2 # supports c++17
         - BUILD_TYPE="Debug" TEST_PARAMS="--gtest_filter=*:-:*"
 
@@ -88,7 +85,6 @@ matrix:
         - travis_retry sudo apt-get install cmake cmake-data g++-7 valgrind
       env:
         - SET_ENV="CC=gcc-7 && CXX=g++-7"
-        - CXX_STANDARD=17
         - CMAKE_VERSION=3.8.2 # supports c++17
         - BUILD_TYPE="Release"
 
@@ -108,7 +104,6 @@ matrix:
       env:
         - SET_ENV="CC=gcc-8 && CXX=g++-8"
         - CMAKE_VERSION=3.8.2 # supports c++17
-        - CXX_STANDARD=17
         - BUILD_TYPE="Debug" STATIC_LIB="true" TEST_PARAMS="--gtest_filter=*:-:*"
 
     ############################################################################
@@ -123,7 +118,6 @@ matrix:
       env:
         - SET_ENV="CC=gcc-8 && CXX=g++-8"
         - CMAKE_VERSION=3.8.2 # supports c++17
-        - CXX_STANDARD=17
         - BUILD_TYPE="Release" STATIC_LIB="true"
 
     ############################################################################
@@ -138,7 +132,6 @@ matrix:
       env:
         - SET_ENV="CC=gcc-8 && CXX=g++-8"
         - CMAKE_VERSION=3.8.2 # supports c++17
-        - CXX_STANDARD=17
         - BUILD_TYPE="Debug" TEST_PARAMS="--gtest_filter=*:-:*"
 
     ############################################################################
@@ -153,7 +146,6 @@ matrix:
       env:
         - SET_ENV="CC=gcc-8 && CXX=g++-8"
         - CMAKE_VERSION=3.8.2 # supports c++17
-        - CXX_STANDARD=17
         - BUILD_TYPE="Release"
 
     ############################################################################
@@ -172,7 +164,6 @@ matrix:
       env:
         - SET_ENV="CC=gcc-9 && CXX=g++-9"
         - CMAKE_VERSION=3.8.2 # supports c++17
-        - CXX_STANDARD=17
         - BUILD_TYPE="Debug" STATIC_LIB="true" TEST_PARAMS="--gtest_filter=*:-:*"
 
     ############################################################################
@@ -187,7 +178,6 @@ matrix:
       env:
         - SET_ENV="CC=gcc-9 && CXX=g++-9"
         - CMAKE_VERSION=3.8.2 # supports c++17
-        - CXX_STANDARD=17
         - BUILD_TYPE="Release" STATIC_LIB="true"
 
     ############################################################################
@@ -202,7 +192,6 @@ matrix:
       env:
         - SET_ENV="CC=gcc-9 && CXX=g++-9"
         - CMAKE_VERSION=3.8.2 # supports c++17
-        - CXX_STANDARD=17
         - BUILD_TYPE="Debug" TEST_PARAMS="--gtest_filter=*:-:*"
 
     ############################################################################
@@ -217,11 +206,10 @@ matrix:
       env:
         - SET_ENV="CC=gcc-9 && CXX=g++-9"
         - CMAKE_VERSION=3.8.2 # supports c++17
-        - CXX_STANDARD=17
         - BUILD_TYPE="Release"
 
     ############################################################################
-    # OSX
+    # OSX 
     ############################################################################
 
     ############################################################################
@@ -235,7 +223,6 @@ matrix:
           brew install bison@2.7 || true;
       env:
         - SET_ENV="PATH=/usr/local/opt/bison/bin:/usr/local/opt/bison@2.7/bin:$PATH"
-        - CXX_STANDARD=11
         - BOOST_B2_ARGS="boost.locale.iconv=off"
         - BUILD_TYPE="Debug" STATIC_LIB="true" TEST_PARAMS="--gtest_filter=*:-:*"
 
@@ -250,7 +237,6 @@ matrix:
           brew install bison@2.7 || true;
       env:
         - SET_ENV="PATH=/usr/local/opt/bison/bin:/usr/local/opt/bison@2.7/bin:$PATH"
-        - CXX_STANDARD=11
         - BOOST_B2_ARGS="boost.locale.iconv=off"
         - BUILD_TYPE="Release" STATIC_LIB="true"
 
@@ -265,7 +251,6 @@ matrix:
           brew install bison@2.7 || true;
       env:
         - SET_ENV="PATH=/usr/local/opt/bison/bin:/usr/local/opt/bison@2.7/bin:$PATH"
-        - CXX_STANDARD=11
         - BOOST_B2_ARGS="boost.locale.iconv=off"
         - BUILD_TYPE="Debug" TEST_PARAMS="--gtest_filter=*:-:*"
 
@@ -280,7 +265,6 @@ matrix:
           brew install bison@2.7 || true;
       env:
         - SET_ENV="PATH=/usr/local/opt/bison/bin:/usr/local/opt/bison@2.7/bin:$PATH"
-        - CXX_STANDARD=11
         - BOOST_B2_ARGS="boost.locale.iconv=off"
         - BUILD_TYPE="Release"
 
@@ -414,7 +398,7 @@ before_script:
   ############################################################################
   # Go back to the root of the project and setup the build directory
   ############################################################################
-  - CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DCMAKE_CXX_STANDARD=${CXX_STANDARD} -DUSE_TESTS=On" ${BUILD_PYRESEARCH}
+  - CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DUSE_TESTS=On" ${BUILD_PYRESEARCH}
   - cd ${TRAVIS_BUILD_DIR}
   - (mkdir build && cd build && cmake .. ${CMAKE_OPTIONS})
 
