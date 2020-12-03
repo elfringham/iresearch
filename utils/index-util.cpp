@@ -27,6 +27,7 @@
 
 #include <unordered_map>
 #include <functional>
+#include <string>
 
 typedef std::unordered_map<
   std::string,
